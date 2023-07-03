@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/d0m84/ip-monitor/pkg/logger"
-
-	"github.com/bobesa/go-domain-util/domainutil"
 )
 
 func LookupLocal(domain string, ip_version string) ([]net.IP, error) {
@@ -23,20 +22,27 @@ func LookupLocal(domain string, ip_version string) ([]net.IP, error) {
 	return ips, nil
 }
 
-func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
-	nameservers, err := net.LookupNS(domain)
-	if err != nil {
-		tld := domainutil.Domain(domain)
-		if tld == "" {
-			logger.Errorf("Error resolving authorative DNS servers: %s", err)
-			return nil, errors.New("dns authorative error")
-		} else {
-			nameservers, err = net.LookupNS(tld)
-			if err != nil {
-				logger.Errorf("Error resolving authorative DNS servers using fallback: %s", err)
-				return nil, errors.New("dns authorative fallback error")
-			}
+func FindNameServers(domain string) ([]*net.NS, error) {
+	domainParts := strings.Split(domain, ".")
+
+	for i := range domainParts {
+		t := domainParts[i:len(domainParts):len(domainParts)]
+		d := strings.Join(t, ".")
+
+		nameservers, err := net.LookupNS(d)
+		if err == nil {
+			return nameservers, nil
 		}
+	}
+
+	return nil, errors.New("dns resolve authorative error")
+}
+
+func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
+	nameservers, err := FindNameServers(domain)
+	if err != nil {
+		logger.Errorf("Unable to get authorative nameservers")
+		return nil, errors.New("dns resolve authorative error")
 	}
 
 	ns_ips, err := net.LookupIP(nameservers[rand.Intn(len(nameservers))].Host)
