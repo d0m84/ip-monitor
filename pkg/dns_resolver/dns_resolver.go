@@ -51,7 +51,13 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 		return nil, errors.New("dns lookup authorative error")
 	}
 
-	nameserver := fmt.Sprintf("%s:53", ns_ips[0])
+	ns_ip := ns_ips[0]
+	var nameserver string
+	if ns_ip.To4() != nil {
+		nameserver = fmt.Sprintf("%s:53", ns_ip)
+	} else {
+		nameserver = fmt.Sprintf("[%s]:53", ns_ip)
+	}
 	logger.Debugf("Using nameserver %s", nameserver)
 
 	r := &net.Resolver{
