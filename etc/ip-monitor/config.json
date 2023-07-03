@@ -1,5 +1,6 @@
 {
     "log_level": "info",
+    "log_timestamps": false,
     "interval": 60,
     "http_ip_provider": "https://api64.ipify.org?format=text",
     "monitors": [

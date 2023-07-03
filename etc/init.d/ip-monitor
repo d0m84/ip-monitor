@@ -1,0 +1,62 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:             ip-monitor
+# Default-Start:        2 3 4 5
+# Default-Stop:         1
+# Required-Start:       $network $local_fs $remote_fs $syslog
+# Required-Stop:        $remote_fs
+# Short-Description:    IP-Monitor
+### END INIT INFO
+
+USER="root"
+DAEMON="/usr/local/bin/ip-monitor"
+NAME="ip-monitor"
+PIDFILE="/run/ip-monitor.pid"
+OPTIONS="-c /etc/ip-monitor/config.json"
+LOGFILE="/var/log/ip-monitor.log"
+
+if test -f /etc/default/ip-monitor; then
+  . /etc/default/ip-monitor
+fi
+
+. /lib/lsb/init-functions
+
+start() {
+  log_begin_msg "Starting IP-Monitor:" "$NAME"
+  start-stop-daemon -S -o -q -m -b -p $PIDFILE -x $DAEMON -u $USER -c $USER --startas /bin/bash -- -c "exec $DAEMON $OPTIONS >> $LOGFILE 2>&1"
+  if $(start-stop-daemon -T -p $PIDFILE); then
+    log_end_msg 0
+  else
+    log_end_msg 1
+  fi
+}
+
+stop() {
+  log_begin_msg "Stopping IP-Monitor:" "$NAME"
+  if start-stop-daemon -K --remove-pidfile -o -q -p $PIDFILE -x $DAEMON -u $USER; then
+    log_end_msg 0
+  else
+    log_end_msg 1
+    exit 1
+  fi
+}
+
+case "$1" in
+  start)
+      start
+    ;;
+  stop)
+      stop
+    ;;
+  restart|force-reload|reload)
+      stop
+      start
+    ;;
+  *)
+      echo "Usage: /etc/init.d/ip-monitor {start|stop|restart}" >&2
+      exit 1
+    ;;
+esac
+
+exit 0

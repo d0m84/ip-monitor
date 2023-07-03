@@ -6,9 +6,10 @@ If a change is detected the configured triggers (e.g. scripts) are executed with
 
 ## Installation
 1. Download and unpack appropriate release to e.g. `/usr/local/bin/ip-monitor`
-2. Register and Enable as systemd service. An example unit file can be found under `etc/` in this repository
-3. Configure as described below. An example configuration file can be found under `etc/` in this repository
-4. Start and check journal logs
+2. Register and Enable as Systemd service. An example unit file can be found under `etc/` in this repository
+3. Alternatively: (Enable as SysVinit service. An example init script can be found under `etc/` in this repository)
+4. Configure as described below. An example configuration file can be found under `etc/` in this repository
+5. Start and check journal logs (Systemd) or logfile (SysVinit)
 
 
 ## Configuration
@@ -19,6 +20,7 @@ The JSON config file format allows to configure several monitors with one or mor
 | Key | Value | Comment |
 | - | - | - |
 | log_level | string(info\|debug) | Log level of daemon process |
+| log_timestamps | bool | Timestamps in log output. Useful if running with SysVinit |
 | interval | int() | Monitor interval in seconds. A too low value might cause a Service/DNS provider ban |
 | http_provider | string() | URL of the HTTP IP provider to use. Must respond only with an IP address string |
 

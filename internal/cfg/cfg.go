@@ -10,6 +10,7 @@ import (
 
 type Configuration struct {
 	LogLevel       string `json:"log_level"`
+	LogTimestamps  bool   `json:"log_timestamps"`
 	Interval       int    `json:"interval"`
 	HttpIpProvider string `json:"http_ip_provider"`
 	Monitors       []struct {

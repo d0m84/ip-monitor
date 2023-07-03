@@ -10,6 +10,8 @@ import (
 // lock is a global mutex lock to gain control of logrus.<SetLevel|SetOutput>
 var lock = sync.Mutex{}
 
+var Formatter = new(logrus.TextFormatter)
+
 // SetLevelDebug sets the standard logger level to Debug
 func SetLevelDebug() {
 	lock.Lock()
@@ -194,11 +196,10 @@ func Panicln(args ...interface{}) {
 
 func init() {
 	// Setup logger defaults
-	formatter := new(logrus.TextFormatter)
-	formatter.TimestampFormat = "02-01-2006 15:04:05"
-	formatter.FullTimestamp = true
-	formatter.DisableTimestamp = true
-	logrus.SetFormatter(formatter)
+	Formatter.TimestampFormat = "02-01-2006 15:04:05"
+	Formatter.FullTimestamp = true
+	Formatter.DisableTimestamp = true
+	logrus.SetFormatter(Formatter)
 	logrus.SetOutput(os.Stdout) // Set output to stdout; set to stderr by default
 	logrus.SetLevel(logrus.DebugLevel)
 }
