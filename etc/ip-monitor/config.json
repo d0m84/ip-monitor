@@ -1,0 +1,19 @@
+{
+    "log_level": "info",
+    "interval": 60,
+    "http_ip_provider": "https://api64.ipify.org?format=text",
+    "monitors": [
+            {
+                "name": "local",
+                "domain": "",
+                "ip_version": "ip4",
+                "triggers": ["/usr/local/bin/local_ip_change.sh"]
+            },
+            {
+                "name": "remote",
+                "domain": "example.com",
+                "ip_version": "ip6",
+                "triggers": ["/usr/local/bin/remote_ip_change.sh"]
+            }
+    ]
+}

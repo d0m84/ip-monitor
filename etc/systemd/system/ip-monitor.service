@@ -1,0 +1,10 @@
+[Unit]
+Description=ip-monitor
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/ip-monitor -c /etc/ip-monitor/config.json
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

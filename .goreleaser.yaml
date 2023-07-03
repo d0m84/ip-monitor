@@ -1,0 +1,12 @@
+builds:
+  - main: ./cmd/ip-monitor/main.go
+    binary: ip-monitor
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=auto
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
