@@ -40,6 +40,16 @@ func LoadConfiguration(cfgFile string) Configuration {
 		logger.Fatalln("Unable to parse config:", err)
 	}
 
+	if config.LogLevel == "debug" {
+		logger.SetLevelDebug()
+	} else {
+		logger.SetLevelInfo()
+	}
+
+	if config.LogTimestamps {
+		logger.Formatter.DisableTimestamp = false
+	}
+
 	for i := range config.Monitors {
 		if config.Monitors[i].Domain == "" {
 			config.Monitors[i].Type = "http"

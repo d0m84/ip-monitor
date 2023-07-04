@@ -39,8 +39,7 @@ As described above the daemon can monitor IP address changes via HTTP or DNS.
 
 In the HTTP mode usually only local Internet IP address changes can be detected, while in DNS mode any system can be monitored which populates a DNS address.
 
-It is expected that only **one** IP address is populated at a time. If multiple addresses can be found, a warning will be logged and only the first IP address will be taken into consideration.
-Depending on the DNS setup this might cause a frequent execution of the configured triggers.
+It is expected that only **one** IP address is populated at a time. If multiple addresses can be found, a warning will be logged and only the first IP address will be taken into consideration. Depending on the DNS setup this might cause a frequent execution of the configured triggers.
 
 ### Use cases
 
@@ -84,5 +83,5 @@ echo "New IP is: $2"
 - Support IPv4 and IPv6 scenarios
 
 ## Disclaimer
-The daemon is only tested on Debian Linux with IPv4.
-It might work on Darwin, MacOS or other Linux distributions with IPv6 as well.
+The daemon is only tested on Debian and Ubuntu Linux.
+It might work on Darwin, MacOS or other Linux distributions as well.
