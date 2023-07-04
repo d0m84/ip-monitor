@@ -20,7 +20,7 @@ func Execute(triggers []string, oldip string, newip string) error {
 			logger.Errorln("Error while executing trigger:", err)
 			exec_error = true
 		}
-		logger.Debugf("Sucessfully executed trigger: %s", out)
+		logger.Debugf("Successfully executed trigger: %s", out)
 	}
 
 	if exec_error {

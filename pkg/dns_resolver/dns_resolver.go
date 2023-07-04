@@ -15,7 +15,7 @@ import (
 func LookupLocal(domain string, ip_version string) ([]net.IP, error) {
 	ips, err := net.DefaultResolver.LookupIP(context.Background(), ip_version, domain)
 	if err != nil {
-		logger.Errorf("Error resolving domain name: %s", err)
+		logger.Errorf("Error resolving domain %s: %s", domain, err)
 		return nil, errors.New("dns cache error")
 	}
 
@@ -41,13 +41,13 @@ func FindNameServers(domain string) ([]*net.NS, error) {
 func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 	nameservers, err := FindNameServers(domain)
 	if err != nil {
-		logger.Errorf("Unable to get authorative nameservers")
+		logger.Errorf("Unable to detect authorative nameservers for %s", domain)
 		return nil, errors.New("dns resolve authorative error")
 	}
 
 	ns_ips, err := net.LookupIP(nameservers[rand.Intn(len(nameservers))].Host)
 	if err != nil {
-		logger.Errorf("Error resolving IP addresses of authorative DNS server: %s", err)
+		logger.Errorf("Error resolving IP addresses of authorative DNS server for %s: %s", domain, err)
 		return nil, errors.New("dns lookup authorative error")
 	}
 
@@ -58,7 +58,7 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 	} else {
 		nameserver = fmt.Sprintf("[%s]:53", ns_ip)
 	}
-	logger.Debugf("Using nameserver %s", nameserver)
+	logger.Debugf("Using nameserver %s for %s", nameserver, domain)
 
 	r := &net.Resolver{
 		PreferGo: true,
@@ -72,7 +72,7 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 
 	ips, err := r.LookupIP(context.Background(), ip_version, domain)
 	if err != nil {
-		logger.Errorf("Error resolving domain name: %s", err)
+		logger.Errorf("Error resolving domain %s: %s", domain, err)
 		return nil, errors.New("dns hosts error")
 	}
 
@@ -82,7 +82,7 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 func Resolve(domain string, ip_version string) (net.IP, error) {
 	cname, err := net.LookupCNAME(domain)
 	if err != nil {
-		logger.Errorf("Error checking for cname: %s", err)
+		logger.Errorf("Error checking if %s is a CNAME: %s", domain, err)
 		return nil, errors.New("dns cname error")
 	}
 
@@ -102,10 +102,10 @@ func Resolve(domain string, ip_version string) (net.IP, error) {
 		}
 	}
 
-	logger.Debugf("Resolved IP addresses: %s", ips)
+	logger.Debugf("Resolved IP addresses for %s: %s", domain, ips)
 
 	if len(ips) > 1 {
-		logger.Warnf("Received multiple host entries for domain %s. Using first entry.", domain)
+		logger.Warnf("Received multiple host entries for %s. Using first entry.", domain)
 	}
 
 	return ips[0], nil

@@ -42,6 +42,16 @@ stop() {
   fi
 }
 
+reload() {
+  log_begin_msg "Reloading IP-Monitor:" "$NAME"
+  if kill -HUP $(cat $PIDFILE); then
+    log_end_msg 0
+  else
+    log_end_msg 1
+    exit 1
+  fi
+}
+
 case "$1" in
   start)
       start
@@ -49,12 +59,15 @@ case "$1" in
   stop)
       stop
     ;;
-  restart|force-reload|reload)
+  restart)
       stop
       start
     ;;
+  force-reload|reload)
+      reload
+    ;;
   *)
-      echo "Usage: /etc/init.d/ip-monitor {start|stop|restart}" >&2
+      echo "Usage: /etc/init.d/ip-monitor {start|stop|restart|reload}" >&2
       exit 1
     ;;
 esac
