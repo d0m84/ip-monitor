@@ -50,6 +50,10 @@ func LoadConfiguration(cfgFile string) Configuration {
 		logger.Formatter.DisableTimestamp = false
 	}
 
+	if len(config.Monitors) == 0 {
+		logger.Fatalln("No monitor configured")
+	}
+
 	for i := range config.Monitors {
 		if config.Monitors[i].Domain == "" {
 			config.Monitors[i].Type = "http"

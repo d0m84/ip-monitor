@@ -12,19 +12,39 @@ import (
 	"github.com/d0m84/ip-monitor/pkg/logger"
 )
 
-func LookupLocal(domain string, ip_version string) ([]net.IP, error) {
-	ips, err := net.DefaultResolver.LookupIP(context.Background(), ip_version, domain)
+func CheckIfCNAME(domain string) (string, bool, error) {
+	target, err := net.LookupCNAME(domain)
 	if err != nil {
-		logger.Errorf("Error resolving domain %s: %s", domain, err)
-		return nil, errors.New("dns cache error")
+		return "", true, err
+	} else if target == domain {
+		logger.Debugf("Record is not a CNAME: %s == %s", domain, target)
+		return target, false, nil
+	} else {
+		logger.Debugf("Record is a CNAME: %s != %s", domain, target)
+		return target, true, nil
 	}
+}
 
-	return ips, nil
+func FindFinalTarget(domain string) (string, error) {
+	var err error
+	var target string = domain
+	var is_cname bool
+	for i := 0; i < 50; i++ {
+		target, is_cname, err = CheckIfCNAME(target)
+		if err != nil {
+			logger.Errorf("Error checking if %s is a CNAME: %s", target, err)
+			return "", err
+		}
+		if !is_cname {
+			logger.Debugf("Final target for domain %s is %s", domain, target)
+			return target, nil
+		}
+	}
+	return "", errors.New("dns cname check limit reached")
 }
 
 func FindNameServers(domain string) ([]*net.NS, error) {
 	domainParts := strings.Split(domain, ".")
-
 	for i := range domainParts {
 		t := domainParts[i:len(domainParts):len(domainParts)]
 		d := strings.Join(t, ".")
@@ -34,7 +54,6 @@ func FindNameServers(domain string) ([]*net.NS, error) {
 			return nameservers, nil
 		}
 	}
-
 	return nil, errors.New("dns resolve authorative error")
 }
 
@@ -80,32 +99,26 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 }
 
 func Resolve(domain string, ip_version string) (net.IP, error) {
-	cname, err := net.LookupCNAME(domain)
+
+	if domain[len(domain)-1] != '.' {
+		domain += "."
+	}
+
+	target, err := FindFinalTarget(domain)
 	if err != nil {
-		logger.Errorf("Error checking if %s is a CNAME: %s", domain, err)
-		return nil, errors.New("dns cname error")
+		logger.Errorf("Error checking for final target of %s: %s", domain, err)
+		return nil, errors.New("dns cname check error")
 	}
 
-	var ips []net.IP
-
-	if cname == fmt.Sprintf("%s.", domain) {
-		logger.Debugf("Using authorative DNS servers for %s", domain)
-		ips, err = LookupAuthorative(domain, ip_version)
-		if err != nil {
-			return nil, errors.New("dns authorative error")
-		}
-	} else {
-		logger.Debugf("Using local DNS servers for %s", domain)
-		ips, err = LookupLocal(domain, ip_version)
-		if err != nil {
-			return nil, errors.New("dns cache error")
-		}
+	ips, err := LookupAuthorative(target, ip_version)
+	if err != nil {
+		return nil, errors.New("dns authorative error")
 	}
-
 	logger.Debugf("Resolved IP addresses for %s: %s", domain, ips)
 
 	if len(ips) > 1 {
-		logger.Warnf("Received multiple host entries for %s. Using first entry.", domain)
+		logger.Errorf("Received multiple host entries for %s: %s", domain, ips)
+		return nil, errors.New("multiple host records found")
 	}
 
 	return ips[0], nil

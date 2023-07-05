@@ -39,7 +39,8 @@ As described above the daemon can monitor IP address changes via HTTP or DNS.
 
 In the HTTP mode usually only local Internet IP address changes can be detected, while in DNS mode any system can be monitored which populates a DNS address.
 
-It is expected that only **one** IP address is populated at a time. If multiple addresses can be found, a warning will be logged and only the first IP address will be taken into consideration. Depending on the DNS setup this might cause a frequent execution of the configured triggers.
+> **Warning**
+> It is expected that only **one** IP address is populated via DNS for a domain. If multiple hosts can be found at a time, an error will be logged and the trigger will not be executed because of unpredictable results.
 
 ### Use cases
 
@@ -78,7 +79,7 @@ echo "New IP is: $2"
 
 ## Key concepts
 - Allow to configure several monitors with several triggers each
-- Avoid to use the local DNS cache (not supported for CNAME targets)
+- Avoid to use the local DNS cache
 - Use HTTP or DNS resolvers
 - Support IPv4 and IPv6 scenarios
 
