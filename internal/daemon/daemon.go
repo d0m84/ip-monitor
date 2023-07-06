@@ -20,19 +20,21 @@ var (
 func Start(config cfg.Configuration) {
 	go func() {
 		for {
-			select {
-			case <-Exit:
-				state = make(map[int]net.IP)
-				return
-			default:
-				Orchestrate(config)
-				time.Sleep(time.Duration(config.Interval) * time.Second)
+			Run(config)
+			for i := 1; i <= config.Interval; i++ {
+				select {
+				case <-Exit:
+					state = make(map[int]net.IP)
+					return
+				default:
+					time.Sleep(1 * time.Second)
+				}
 			}
 		}
 	}()
 }
 
-func Orchestrate(config cfg.Configuration) {
+func Run(config cfg.Configuration) {
 	var wg = &sync.WaitGroup{}
 	for i := range config.Monitors {
 		wg.Add(1)

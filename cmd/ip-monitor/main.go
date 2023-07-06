@@ -14,7 +14,7 @@ import (
 func main() {
 	cli_args := cli.Arguments()
 	config := cfg.LoadConfiguration(cli_args.ConfigPath)
-	sigs := make(chan os.Signal)
+	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 
 	logger.Infoln("Starting IP-Monitor Daemon")

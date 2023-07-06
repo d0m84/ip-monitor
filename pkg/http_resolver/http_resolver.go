@@ -11,33 +11,37 @@ import (
 	"github.com/d0m84/ip-monitor/pkg/logger"
 )
 
+var (
+	timeout int = 10
+)
+
 func Resolve(provider string, ip_version string) (net.IP, error) {
 
-	var zeroDialer net.Dialer
-	var httpClient = &http.Client{Timeout: 10 * time.Second}
-	var tcpVersion string = ip_version
+	var dialer net.Dialer
+	var client = &http.Client{Timeout: time.Second * time.Duration(timeout)}
+	var tcp_version string = "tcp"
 
 	if ip_version == "ip4" {
-		tcpVersion = "tcp4"
+		tcp_version = "tcp4"
 	} else if ip_version == "ip6" {
-		tcpVersion = "tcp6"
+		tcp_version = "tcp6"
 	}
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		return zeroDialer.DialContext(ctx, tcpVersion, addr)
+		return dialer.DialContext(ctx, tcp_version, addr)
 	}
-	httpClient.Transport = transport
+	client.Transport = transport
 
-	resp, err := httpClient.Get(provider)
+	resp, err := client.Get(provider)
 	if err != nil {
 		logger.Errorf("Error connecting to HTTP IP provider: %s", err)
 		return nil, errors.New("http error")
 	}
 	defer resp.Body.Close()
 
-	statusOK := resp.StatusCode >= 200 && resp.StatusCode < 300
-	if !statusOK {
+	status_ok := resp.StatusCode >= 200 && resp.StatusCode < 300
+	if !status_ok {
 		logger.Errorf("HTTP status error from IP provider: %s", provider)
 		return nil, errors.New("status error")
 	}
