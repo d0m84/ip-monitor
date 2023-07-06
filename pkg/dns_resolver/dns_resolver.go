@@ -12,6 +12,10 @@ import (
 	"github.com/d0m84/ip-monitor/pkg/logger"
 )
 
+var (
+	timeout int = 10
+)
+
 func CheckIfCNAME(domain string) (string, bool, error) {
 	target, err := net.LookupCNAME(domain)
 	if err != nil {
@@ -29,10 +33,10 @@ func FindFinalTarget(domain string) (string, error) {
 	var err error
 	var target string = domain
 	var is_cname bool
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 2; i++ {
 		target, is_cname, err = CheckIfCNAME(target)
 		if err != nil {
-			logger.Errorf("Error checking if %s is a CNAME: %s", target, err)
+			logger.Errorf("Error checking if %s is a CNAME: %s", domain, err)
 			return "", err
 		}
 		if !is_cname {
@@ -40,13 +44,14 @@ func FindFinalTarget(domain string) (string, error) {
 			return target, nil
 		}
 	}
-	return "", errors.New("dns cname check limit reached")
+	logger.Errorf("Maximum CNAME lookup limit reached for %s", domain)
+	return "", errors.New("dns cname lookup limit reached")
 }
 
 func FindNameServers(domain string) ([]*net.NS, error) {
-	domainParts := strings.Split(domain, ".")
-	for i := range domainParts {
-		t := domainParts[i:len(domainParts):len(domainParts)]
+	domain_parts := strings.Split(domain, ".")
+	for i := range domain_parts {
+		t := domain_parts[i:len(domain_parts):len(domain_parts)]
 		d := strings.Join(t, ".")
 
 		nameservers, err := net.LookupNS(d)
@@ -83,7 +88,7 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
 			d := net.Dialer{
-				Timeout: time.Millisecond * time.Duration(10000),
+				Timeout: time.Second * time.Duration(timeout),
 			}
 			return d.DialContext(ctx, network, nameserver)
 		},
@@ -106,8 +111,7 @@ func Resolve(domain string, ip_version string) (net.IP, error) {
 
 	target, err := FindFinalTarget(domain)
 	if err != nil {
-		logger.Errorf("Error checking for final target of %s: %s", domain, err)
-		return nil, errors.New("dns cname check error")
+		return nil, errors.New("dns cname lookup error")
 	}
 
 	ips, err := LookupAuthorative(target, ip_version)
