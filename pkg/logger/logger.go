@@ -12,6 +12,14 @@ var lock = sync.Mutex{}
 
 var Formatter = new(logrus.TextFormatter)
 
+// log executes a logging function with the specified output stream and mutex protection
+func log(output *os.File, fn func()) {
+	lock.Lock()
+	logrus.SetOutput(output)
+	fn()
+	lock.Unlock()
+}
+
 // SetLevelDebug sets the standard logger level to Debug
 func SetLevelDebug() {
 	lock.Lock()
@@ -28,170 +36,107 @@ func SetLevelInfo() {
 
 // Trace logs a message at level Trace to stdout.
 func Trace(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Trace(args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Trace(args...) })
 }
 
 // Tracef logs a message at level Trace to stdout.
 func Tracef(format string, args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Tracef(format, args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Tracef(format, args...) })
 }
 
 // Traceln logs a message at level Trace to stdout.
 func Traceln(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Traceln(args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Traceln(args...) })
 }
 
 // Debug logs a message at level Debug to stdout.
 func Debug(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Debug(args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Debug(args...) })
 }
 
 // Debugf logs a message at level Debug to stdout.
 func Debugf(format string, args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Debugf(format, args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Debugf(format, args...) })
 }
 
 // Debugln logs a message at level Debug to stdout.
 func Debugln(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Debugln(args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Debugln(args...) })
 }
 
 // Info logs a message at level Info to stdout.
 func Info(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Info(args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Info(args...) })
 }
 
 // Infof logs a message at level Info to stdout.
 func Infof(format string, args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Infof(format, args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Infof(format, args...) })
 }
 
 // Infoln logs a message at level Info to stdout.
 func Infoln(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Infoln(args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Infoln(args...) })
 }
 
 // Warn logs a message at level Warn to stdout.
 func Warn(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Warn(args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Warn(args...) })
 }
 
 // Warnf logs a message at level Warn to stdout.
 func Warnf(format string, args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Warnf(format, args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Warnf(format, args...) })
 }
 
 // Warnln logs a message at level Warn to stdout.
 func Warnln(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Warnln(args...)
-	lock.Unlock()
+	log(os.Stdout, func() { logrus.Warnln(args...) })
 }
 
 // Error logs a message at level Error to stderr.
 func Error(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stderr)
-	logrus.Error(args...)
-	lock.Unlock()
+	log(os.Stderr, func() { logrus.Error(args...) })
 }
 
-// Errorf logs a message at level Error to stdout.
+// Errorf logs a message at level Error to stderr.
 func Errorf(format string, args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Errorf(format, args...)
-	lock.Unlock()
+	log(os.Stderr, func() { logrus.Errorf(format, args...) })
 }
 
-// Errorln logs a message at level Error to stdout.
+// Errorln logs a message at level Error to stderr.
 func Errorln(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Errorln(args...)
-	lock.Unlock()
+	log(os.Stderr, func() { logrus.Errorln(args...) })
 }
 
 // Fatal logs a message at level Fatal to stderr then the process will exit with status set to 1.
 func Fatal(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stderr)
-	logrus.Fatal(args...)
-	lock.Unlock()
+	log(os.Stderr, func() { logrus.Fatal(args...) })
 }
 
-// Fatalf logs a message at level Fatal to stdout.
+// Fatalf logs a message at level Fatal to stderr.
 func Fatalf(format string, args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Fatalf(format, args...)
-	lock.Unlock()
+	log(os.Stderr, func() { logrus.Fatalf(format, args...) })
 }
 
-// Fatalln logs a message at level Fatal to stdout.
+// Fatalln logs a message at level Fatal to stderr.
 func Fatalln(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Fatalln(args...)
-	lock.Unlock()
+	log(os.Stderr, func() { logrus.Fatalln(args...) })
 }
 
 // Panic logs a message at level Panic to stderr; calls panic() after logging.
 func Panic(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stderr)
-	logrus.Panic(args...)
-	lock.Unlock()
+	log(os.Stderr, func() { logrus.Panic(args...) })
 }
 
-// Panicf logs a message at level Panic to stdout.
+// Panicf logs a message at level Panic to stderr.
 func Panicf(format string, args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Panicf(format, args...)
-	lock.Unlock()
+	log(os.Stderr, func() { logrus.Panicf(format, args...) })
 }
 
-// Panicln logs a message at level Panic to stdout.
+// Panicln logs a message at level Panic to stderr.
 func Panicln(args ...interface{}) {
-	lock.Lock()
-	logrus.SetOutput(os.Stdout)
-	logrus.Panicln(args...)
-	lock.Unlock()
+	log(os.Stderr, func() { logrus.Panicln(args...) })
 }
 
 func init() {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/d0m84/ip-monitor/pkg/logger"
@@ -16,6 +17,9 @@ var (
 )
 
 func Resolve(provider string, ip_version string) (net.IP, error) {
+	if ip_version != "ip4" && ip_version != "ip6" {
+		return nil, errors.New("invalid ip_version: must be 'ip4' or 'ip6'")
+	}
 
 	var dialer net.Dialer
 	var client = &http.Client{Timeout: time.Second * time.Duration(timeout)}
@@ -32,6 +36,10 @@ func Resolve(provider string, ip_version string) (net.IP, error) {
 		return dialer.DialContext(ctx, tcp_version, addr)
 	}
 	client.Transport = transport
+
+	if provider == "" {
+		return nil, errors.New("http provider is empty")
+	}
 
 	resp, err := client.Get(provider)
 	if err != nil {
@@ -52,11 +60,27 @@ func Resolve(provider string, ip_version string) (net.IP, error) {
 		return nil, errors.New("response error")
 	}
 
-	ip := net.ParseIP(string(body))
+	ipString := strings.TrimSpace(string(body))
+	if ipString == "" {
+		logger.Errorf("Received empty HTTP response body from IP provider: %s", provider)
+		return nil, errors.New("body error")
+	}
+
+	ip := net.ParseIP(ipString)
 
 	if ip == nil {
-		logger.Errorf("Received HTTP body can not be parsed as IP address: %s", string(body))
+		logger.Errorf("Received HTTP body can not be parsed as IP address: %s", ipString)
 		return nil, errors.New("body error")
+	}
+
+	// Verify IP version matches requested version
+	if ip_version == "ip4" && ip.To4() == nil {
+		logger.Errorf("Expected IPv4 but received IPv6: %s", ip.String())
+		return nil, errors.New("ip version mismatch")
+	}
+	if ip_version == "ip6" && ip.To4() != nil {
+		logger.Errorf("Expected IPv6 but received IPv4: %s", ip.String())
+		return nil, errors.New("ip version mismatch")
 	}
 
 	return ip, nil

@@ -13,18 +13,24 @@ import (
 )
 
 var (
-	Exit  = make(chan bool)
-	state = make(map[int]net.IP)
+	Exit      = make(chan bool, 1)
+	state     = make(map[int]net.IP)
+	stateLock = sync.Mutex{}
 )
 
-func Start(config cfg.Configuration) {
+func Start(config cfg.Configuration) <-chan struct{} {
+	done := make(chan struct{})
+
 	go func() {
+		defer close(done)
 		for {
 			Run(config)
 			for i := 1; i <= config.Interval; i++ {
 				select {
 				case <-Exit:
+					stateLock.Lock()
 					state = make(map[int]net.IP)
+					stateLock.Unlock()
 					return
 				default:
 					time.Sleep(1 * time.Second)
@@ -32,6 +38,8 @@ func Start(config cfg.Configuration) {
 			}
 		}
 	}()
+
+	return done
 }
 
 func Run(config cfg.Configuration) {
@@ -65,19 +73,27 @@ func Monitor(config *cfg.Configuration, i int) {
 		logger.Debugf("Received IP address for %s from DNS provider: %s", monitor.Domain, ip)
 	}
 
-	_, ok := state[i]
+	stateLock.Lock()
+	oldIP, ok := state[i]
 	if !ok {
-		logger.Debugf("Setting initial IP address for %s to: %s", monitor.Name, ip)
 		state[i] = ip
-	} else if state[i].String() != ip.String() {
-		logger.Infof("Detected IP change for %s: %s => %s", monitor.Name, state[i], ip)
+		stateLock.Unlock()
+		logger.Debugf("Setting initial IP address for %s to: %s", monitor.Name, ip)
+		return
+	}
+
+	if oldIP.String() != ip.String() {
+		state[i] = ip
+		stateLock.Unlock()
+		logger.Infof("Detected IP change for %s: %s => %s", monitor.Name, oldIP, ip)
 		if len(monitor.Triggers) == 0 {
 			logger.Warnf("No trigger defined for %s. Doing nothing.", monitor.Name)
 		} else {
-			trigger.Execute(monitor.Triggers, state[i].String(), ip.String())
+			trigger.Execute(monitor.Triggers, oldIP.String(), ip.String())
 		}
-		state[i] = ip
-	} else {
-		logger.Debugf("No IP address change detected for %s: %s == %s", monitor.Name, state[i], ip)
+		return
 	}
+
+	stateLock.Unlock()
+	logger.Debugf("No IP address change detected for %s: %s == %s", monitor.Name, oldIP, ip)
 }
