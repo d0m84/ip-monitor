@@ -18,7 +18,6 @@ func Execute(triggers []string, oldip string, newip string) error {
 
 		if trigger == "" {
 			logger.Warnf("Skipping empty trigger")
-			exec_error = true
 			continue
 		}
 

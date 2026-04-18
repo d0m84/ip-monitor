@@ -17,17 +17,19 @@ var (
 )
 
 func Resolve(provider string, ip_version string) (net.IP, error) {
-	if ip_version != "ip4" && ip_version != "ip6" {
-		return nil, errors.New("invalid ip_version: must be 'ip4' or 'ip6'")
-	}
-
 	var dialer net.Dialer
 	var client = &http.Client{Timeout: time.Second * time.Duration(timeout)}
 	var tcp_version string = "tcp"
 
-	if ip_version == "ip4" {
+	if provider == "" {
+		logger.Errorln("HTTP provider is empty")
+		return nil, errors.New("http provider is empty")
+	}
+
+	switch ip_version {
+	case "ip4":
 		tcp_version = "tcp4"
-	} else if ip_version == "ip6" {
+	case "ip6":
 		tcp_version = "tcp6"
 	}
 
@@ -36,10 +38,6 @@ func Resolve(provider string, ip_version string) (net.IP, error) {
 		return dialer.DialContext(ctx, tcp_version, addr)
 	}
 	client.Transport = transport
-
-	if provider == "" {
-		return nil, errors.New("http provider is empty")
-	}
 
 	resp, err := client.Get(provider)
 	if err != nil {
