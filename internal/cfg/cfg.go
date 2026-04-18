@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/d0m84/ip-monitor/pkg/logger"
 )
@@ -50,16 +51,34 @@ func LoadConfiguration(cfgFile string) Configuration {
 		logger.Formatter.DisableTimestamp = false
 	}
 
+	if config.HttpIpProvider == "" {
+		config.HttpIpProvider = "https://api.ipify.org"
+	}
+
+	if config.Interval <= 0 {
+		logger.Warnf("Invalid interval specified: %d. Defaulting to 60 seconds", config.Interval)
+		config.Interval = 60
+	}
+
 	if len(config.Monitors) == 0 {
 		logger.Fatalln("No monitor configured")
 	}
 
 	for i := range config.Monitors {
-		if config.Monitors[i].Domain == "" {
-			config.Monitors[i].Type = "http"
-		} else {
-			config.Monitors[i].Type = "dns"
+		monitorType := strings.ToLower(config.Monitors[i].Type)
+		if monitorType == "" {
+			if config.Monitors[i].Domain == "" {
+				monitorType = "http"
+			} else {
+				monitorType = "dns"
+			}
 		}
+
+		if monitorType != "http" && monitorType != "dns" {
+			logger.Fatalln("Unsupported monitor type:", config.Monitors[i].Type)
+		}
+
+		config.Monitors[i].Type = monitorType
 		logger.Infof("Initialized monitor %s of type %s", config.Monitors[i].Name, config.Monitors[i].Type)
 	}
 

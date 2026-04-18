@@ -18,21 +18,27 @@ func main() {
 	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 
 	logger.Infoln("Starting IP-Monitor Daemon")
-	daemon.Start(config)
+	var daemonDone <-chan struct{}
+	daemonDone = daemon.Start(config)
 
-	for {
-		select {
-		case s := <-sigs:
-			switch s {
-			case syscall.SIGINT, syscall.SIGTERM:
-				logger.Infoln("Stopping IP-Monitor Daemon")
-				os.Exit(0)
-			case syscall.SIGHUP:
-				logger.Infoln("Reloading IP-Monitor Daemon")
-				daemon.Exit <- true
-				config = cfg.LoadConfiguration(cli_args.ConfigPath)
-				daemon.Start(config)
+	for s := range sigs {
+		switch s {
+		case syscall.SIGINT, syscall.SIGTERM:
+			logger.Infoln("Stopping IP-Monitor Daemon")
+			daemon.Exit <- true
+			<-daemonDone
+			os.Exit(0)
+		case syscall.SIGHUP:
+			logger.Infoln("Reloading IP-Monitor Daemon")
+			daemon.Exit <- true
+			<-daemonDone
+			// Drain any residual signal from the Exit channel
+			select {
+			case <-daemon.Exit:
+			default:
 			}
+			config = cfg.LoadConfiguration(cli_args.ConfigPath)
+			daemonDone = daemon.Start(config)
 		}
 	}
 

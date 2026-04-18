@@ -49,6 +49,7 @@ func FindFinalTarget(domain string) (string, error) {
 }
 
 func FindNameServers(domain string) ([]*net.NS, error) {
+	domain = strings.TrimSuffix(domain, ".")
 	domain_parts := strings.Split(domain, ".")
 	for i := range domain_parts {
 		t := domain_parts[i:len(domain_parts):len(domain_parts)]
@@ -59,23 +60,41 @@ func FindNameServers(domain string) ([]*net.NS, error) {
 			return nameservers, nil
 		}
 	}
-	return nil, errors.New("dns resolve authorative error")
+	return nil, errors.New("dns resolve authoritative error")
 }
 
 func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
+	if ip_version != "ip4" && ip_version != "ip6" {
+		return nil, errors.New("invalid ip_version: must be 'ip4' or 'ip6'")
+	}
+
 	nameservers, err := FindNameServers(domain)
 	if err != nil {
-		logger.Errorf("Unable to detect authorative nameservers for %s", domain)
-		return nil, errors.New("dns resolve authorative error")
+		logger.Errorf("Unable to detect authoritative nameservers for %s", domain)
+		return nil, errors.New("dns resolve authoritative error")
 	}
 
-	ns_ips, err := net.LookupIP(nameservers[rand.Intn(len(nameservers))].Host)
+	if len(nameservers) == 0 {
+		logger.Errorf("No nameservers found for %s", domain)
+		return nil, errors.New("dns resolve authoritative error")
+	}
+
+	// Resolve authoritative nameserver IP with timeout
+	nsCtx, nsCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
+	defer nsCancel()
+
+	ns_ips, err := net.DefaultResolver.LookupIPAddr(nsCtx, nameservers[rand.Intn(len(nameservers))].Host)
 	if err != nil {
-		logger.Errorf("Error resolving IP addresses of authorative DNS server for %s: %s", domain, err)
-		return nil, errors.New("dns lookup authorative error")
+		logger.Errorf("Error resolving IP addresses of authoritative DNS server for %s: %s", domain, err)
+		return nil, errors.New("dns lookup authoritative error")
 	}
 
-	ns_ip := ns_ips[0]
+	if len(ns_ips) == 0 {
+		logger.Errorf("No IP addresses found for authoritative DNS server of %s", domain)
+		return nil, errors.New("dns lookup authoritative error")
+	}
+
+	ns_ip := ns_ips[0].IP
 	var nameserver string
 	if ns_ip.To4() != nil {
 		nameserver = fmt.Sprintf("%s:53", ns_ip)
@@ -94,18 +113,37 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 		},
 	}
 
-	ips, err := r.LookupIP(context.Background(), ip_version, domain)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
+	defer cancel()
+
+	ips, err := r.LookupIP(ctx, ip_version, domain)
 	if err != nil {
 		logger.Errorf("Error resolving domain %s: %s", domain, err)
 		return nil, errors.New("dns hosts error")
+	}
+
+	// Verify all IPs match requested version
+	for _, ip := range ips {
+		if ip_version == "ip4" && ip.To4() == nil {
+			logger.Errorf("Expected IPv4 but received IPv6 for %s: %s", domain, ip.String())
+			return nil, errors.New("ip version mismatch")
+		}
+		if ip_version == "ip6" && ip.To4() != nil {
+			logger.Errorf("Expected IPv6 but received IPv4 for %s: %s", domain, ip.String())
+			return nil, errors.New("ip version mismatch")
+		}
 	}
 
 	return ips, nil
 }
 
 func Resolve(domain string, ip_version string) (net.IP, error) {
+	domain = strings.TrimSpace(domain)
+	if domain == "" {
+		return nil, errors.New("dns domain empty")
+	}
 
-	if domain[len(domain)-1] != '.' {
+	if !strings.HasSuffix(domain, ".") {
 		domain += "."
 	}
 
@@ -116,9 +154,14 @@ func Resolve(domain string, ip_version string) (net.IP, error) {
 
 	ips, err := LookupAuthorative(target, ip_version)
 	if err != nil {
-		return nil, errors.New("dns authorative error")
+		return nil, errors.New("dns authoritative error")
 	}
 	logger.Debugf("Resolved IP addresses for %s: %s", domain, ips)
+
+	if len(ips) == 0 {
+		logger.Errorf("No host records found for %s", domain)
+		return nil, errors.New("dns hosts error")
+	}
 
 	if len(ips) > 1 {
 		logger.Errorf("Received multiple host entries for %s: %s", domain, ips)
