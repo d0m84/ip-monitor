@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/d0m84/ip-monitor/pkg/logger"
@@ -73,13 +74,29 @@ func LoadConfiguration(cfgFile string) Configuration {
 				monitorType = "dns"
 			}
 		}
-
 		if monitorType != "http" && monitorType != "dns" {
 			logger.Fatalln("Unsupported monitor type:", config.Monitors[i].Type)
 		}
-
 		config.Monitors[i].Type = monitorType
-		logger.Infof("Initialized monitor %s of type %s", config.Monitors[i].Name, config.Monitors[i].Type)
+
+		ipVersion := strings.ToLower(config.Monitors[i].IPVersion)
+		if ipVersion != "ip4" && ipVersion != "ip6" {
+			logger.Fatalln("Unsupported IP version:", config.Monitors[i].IPVersion)
+		}
+
+		name := config.Monitors[i].Name
+		if name == "" {
+			if config.Monitors[i].Domain == "" {
+				logger.Warnf("No name specified for monitor %d and no domain provided. Using default name: monitor%d", i, i)
+				name = "monitor" + strconv.Itoa(i)
+			} else {
+				logger.Warnln("No name specified for monitor. Using domain:", config.Monitors[i].Domain)
+				name = config.Monitors[i].Domain
+			}
+			config.Monitors[i].Name = name
+		}
+
+		logger.Infof("Initialized monitor %s of type %s", name, config.Monitors[i].Type)
 	}
 
 	return config

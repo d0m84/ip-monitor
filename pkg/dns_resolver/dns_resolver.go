@@ -64,10 +64,6 @@ func FindNameServers(domain string) ([]*net.NS, error) {
 }
 
 func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
-	if ip_version != "ip4" && ip_version != "ip6" {
-		return nil, errors.New("invalid ip_version: must be 'ip4' or 'ip6'")
-	}
-
 	nameservers, err := FindNameServers(domain)
 	if err != nil {
 		logger.Errorf("Unable to detect authoritative nameservers for %s", domain)
@@ -140,6 +136,7 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 func Resolve(domain string, ip_version string) (net.IP, error) {
 	domain = strings.TrimSpace(domain)
 	if domain == "" {
+		logger.Errorln("DNS domain is empty")
 		return nil, errors.New("dns domain empty")
 	}
 
