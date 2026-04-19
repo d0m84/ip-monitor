@@ -11,8 +11,19 @@ import (
 	"github.com/d0m84/ip-monitor/pkg/logger"
 )
 
+var (
+	version string = "" // Set at build time using -ldflags "-X main.version=$(VERSION)"
+	date    string = "" // Set at build time using -ldflags "-X main.date=$(DATE)"
+)
+
 func main() {
 	cli_args := cli.Arguments()
+
+	if cli_args.Version {
+		println("IP-Monitor version:", version, "- Build date:", date)
+		os.Exit(0)
+	}
+
 	config := cfg.LoadConfiguration(cli_args.ConfigPath)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
