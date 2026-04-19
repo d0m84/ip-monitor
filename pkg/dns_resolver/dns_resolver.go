@@ -44,14 +44,18 @@ func FindFinalTarget(domain string, maxCnameLookups int) (string, error) {
 	return "", errors.New("dns cname lookup limit reached")
 }
 
-func FindNameServers(domain string) ([]*net.NS, error) {
+func FindNameServers(domain string, timeoutSeconds int) ([]*net.NS, error) {
 	domain = strings.TrimSuffix(domain, ".")
 	domain_parts := strings.Split(domain, ".")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeoutSeconds))
+	defer cancel()
+
 	for i := range domain_parts {
 		t := domain_parts[i:len(domain_parts):len(domain_parts)]
 		d := strings.Join(t, ".")
 
-		nameservers, err := net.LookupNS(d)
+		nameservers, err := net.DefaultResolver.LookupNS(ctx, d)
 		if err == nil {
 			return nameservers, nil
 		}
@@ -60,7 +64,7 @@ func FindNameServers(domain string) ([]*net.NS, error) {
 }
 
 func LookupAuthorative(domain string, ip_version string, timeoutSeconds int) ([]net.IP, error) {
-	nameservers, err := FindNameServers(domain)
+	nameservers, err := FindNameServers(domain, timeoutSeconds)
 	if err != nil {
 		logger.Errorf("Unable to detect authoritative nameservers for %s", domain)
 		return nil, errors.New("dns resolve authoritative error")
