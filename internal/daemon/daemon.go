@@ -59,14 +59,14 @@ func Monitor(config *cfg.Configuration, i int) {
 	var err error
 	monitor := config.Monitors[i]
 	if monitor.Type == "http" {
-		ip, err = http_resolver.Resolve(config.HttpIpProvider, monitor.IPVersion)
+		ip, err = http_resolver.Resolve(config.HttpIpProvider, monitor.IPVersion, config.Timeout)
 		if err != nil {
 			return
 		}
 		logger.Debugf("Received IP address for %s from HTTP provider: %s", monitor.Name, ip)
 	}
 	if monitor.Type == "dns" {
-		ip, err = dns_resolver.Resolve(monitor.Domain, monitor.IPVersion)
+		ip, err = dns_resolver.Resolve(monitor.Domain, monitor.IPVersion, config.Timeout, config.MaxCnameLookups)
 		if err != nil {
 			return
 		}

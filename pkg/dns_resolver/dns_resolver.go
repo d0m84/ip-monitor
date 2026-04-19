@@ -12,10 +12,6 @@ import (
 	"github.com/d0m84/ip-monitor/pkg/logger"
 )
 
-var (
-	timeout int = 10
-)
-
 func CheckIfCNAME(domain string) (string, bool, error) {
 	target, err := net.LookupCNAME(domain)
 	if err != nil {
@@ -29,11 +25,11 @@ func CheckIfCNAME(domain string) (string, bool, error) {
 	}
 }
 
-func FindFinalTarget(domain string) (string, error) {
+func FindFinalTarget(domain string, maxCnameLookups int) (string, error) {
 	var err error
 	var target string = domain
 	var is_cname bool
-	for i := 0; i < 2; i++ {
+	for i := 0; i < maxCnameLookups; i++ {
 		target, is_cname, err = CheckIfCNAME(target)
 		if err != nil {
 			logger.Errorf("Error checking if %s is a CNAME: %s", domain, err)
@@ -63,7 +59,7 @@ func FindNameServers(domain string) ([]*net.NS, error) {
 	return nil, errors.New("dns resolve authoritative error")
 }
 
-func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
+func LookupAuthorative(domain string, ip_version string, timeoutSeconds int) ([]net.IP, error) {
 	nameservers, err := FindNameServers(domain)
 	if err != nil {
 		logger.Errorf("Unable to detect authoritative nameservers for %s", domain)
@@ -76,7 +72,7 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 	}
 
 	// Resolve authoritative nameserver IP with timeout
-	nsCtx, nsCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
+	nsCtx, nsCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeoutSeconds))
 	defer nsCancel()
 
 	ns_ips, err := net.DefaultResolver.LookupIPAddr(nsCtx, nameservers[rand.Intn(len(nameservers))].Host)
@@ -103,13 +99,13 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
 			d := net.Dialer{
-				Timeout: time.Second * time.Duration(timeout),
+				Timeout: time.Second * time.Duration(timeoutSeconds),
 			}
 			return d.DialContext(ctx, network, nameserver)
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeoutSeconds))
 	defer cancel()
 
 	ips, err := r.LookupIP(ctx, ip_version, domain)
@@ -133,7 +129,7 @@ func LookupAuthorative(domain string, ip_version string) ([]net.IP, error) {
 	return ips, nil
 }
 
-func Resolve(domain string, ip_version string) (net.IP, error) {
+func Resolve(domain string, ip_version string, timeoutSeconds int, maxCnameLookups int) (net.IP, error) {
 	domain = strings.TrimSpace(domain)
 	if domain == "" {
 		logger.Errorln("DNS domain is empty")
@@ -144,12 +140,12 @@ func Resolve(domain string, ip_version string) (net.IP, error) {
 		domain += "."
 	}
 
-	target, err := FindFinalTarget(domain)
+	target, err := FindFinalTarget(domain, maxCnameLookups)
 	if err != nil {
 		return nil, errors.New("dns cname lookup error")
 	}
 
-	ips, err := LookupAuthorative(target, ip_version)
+	ips, err := LookupAuthorative(target, ip_version, timeoutSeconds)
 	if err != nil {
 		return nil, errors.New("dns authoritative error")
 	}
