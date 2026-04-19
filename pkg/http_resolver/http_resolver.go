@@ -12,13 +12,9 @@ import (
 	"github.com/d0m84/ip-monitor/pkg/logger"
 )
 
-var (
-	timeout int = 10
-)
-
-func Resolve(provider string, ip_version string) (net.IP, error) {
+func Resolve(provider string, ip_version string, timeoutSeconds int) (net.IP, error) {
 	var dialer net.Dialer
-	var client = &http.Client{Timeout: time.Second * time.Duration(timeout)}
+	var client = &http.Client{Timeout: time.Second * time.Duration(timeoutSeconds)}
 	var tcp_version string = "tcp"
 
 	if provider == "" {

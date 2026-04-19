@@ -20,18 +20,31 @@ func log(output *os.File, fn func()) {
 	lock.Unlock()
 }
 
+// SetLevel sets the standard logger level to the specified logrus.Level
+func SetLevel(level logrus.Level) {
+	lock.Lock()
+	logrus.SetLevel(level)
+	lock.Unlock()
+}
+
 // SetLevelDebug sets the standard logger level to Debug
 func SetLevelDebug() {
-	lock.Lock()
-	logrus.SetLevel(logrus.DebugLevel)
-	lock.Unlock()
+	SetLevel(logrus.DebugLevel)
 }
 
 // SetLevelInfo sets the standard logger level to Info
 func SetLevelInfo() {
-	lock.Lock()
-	logrus.SetLevel(logrus.InfoLevel)
-	lock.Unlock()
+	SetLevel(logrus.InfoLevel)
+}
+
+// SetLevelWarn sets the standard logger level to Warn
+func SetLevelWarn() {
+	SetLevel(logrus.WarnLevel)
+}
+
+// SetLevelError sets the standard logger level to Error
+func SetLevelError() {
+	SetLevel(logrus.ErrorLevel)
 }
 
 // Trace logs a message at level Trace to stdout.

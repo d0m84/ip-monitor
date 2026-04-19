@@ -11,11 +11,13 @@ import (
 )
 
 type Configuration struct {
-	LogLevel       string `json:"log_level"`
-	LogTimestamps  bool   `json:"log_timestamps"`
-	Interval       int    `json:"interval"`
-	HttpIpProvider string `json:"http_ip_provider"`
-	Monitors       []struct {
+	LogLevel        string `json:"log_level"`
+	LogTimestamps   bool   `json:"log_timestamps"`
+	Interval        int    `json:"interval"`
+	Timeout         int    `json:"timeout"`
+	MaxCnameLookups int    `json:"max_cname_lookups"`
+	HttpIpProvider  string `json:"http_ip_provider"`
+	Monitors        []struct {
 		Name      string   `json:"name"`
 		Type      string   `json:"type"`
 		Domain    string   `json:"domain"`
@@ -42,9 +44,17 @@ func LoadConfiguration(cfgFile string) Configuration {
 		logger.Fatalln("Unable to parse config:", err)
 	}
 
-	if config.LogLevel == "debug" {
+	switch strings.ToLower(config.LogLevel) {
+	case "debug":
 		logger.SetLevelDebug()
-	} else {
+	case "info":
+		logger.SetLevelInfo()
+	case "warn":
+		logger.SetLevelWarn()
+	case "error":
+		logger.SetLevelError()
+	default:
+		logger.Warnf("Invalid log level specified: %s. Defaulting to info", config.LogLevel)
 		logger.SetLevelInfo()
 	}
 
@@ -56,8 +66,18 @@ func LoadConfiguration(cfgFile string) Configuration {
 		config.HttpIpProvider = "https://api.ipify.org"
 	}
 
+	if config.Timeout <= 0 {
+		logger.Debugf("No or invalid timeout specified: %d. Defaulting to 10 seconds", config.Timeout)
+		config.Timeout = 10
+	}
+
+	if config.MaxCnameLookups <= 0 {
+		logger.Debugf("No or invalid max_cname_lookups specified: %d. Defaulting to 2", config.MaxCnameLookups)
+		config.MaxCnameLookups = 2
+	}
+
 	if config.Interval <= 0 {
-		logger.Warnf("Invalid interval specified: %d. Defaulting to 60 seconds", config.Interval)
+		logger.Warnf("No or invalid interval specified: %d. Defaulting to 60 seconds", config.Interval)
 		config.Interval = 60
 	}
 
@@ -76,6 +96,12 @@ func LoadConfiguration(cfgFile string) Configuration {
 		}
 		if monitorType != "http" && monitorType != "dns" {
 			logger.Fatalln("Unsupported monitor type:", config.Monitors[i].Type)
+		}
+		if monitorType == "dns" && config.Monitors[i].Domain == "" {
+			logger.Fatalln("DNS monitors must have a domain specified")
+		}
+		if monitorType == "http" && config.Monitors[i].Domain != "" {
+			logger.Warnf("HTTP monitors should not have a domain specified. Ignoring domain for monitor %d", i)
 		}
 		config.Monitors[i].Type = monitorType
 

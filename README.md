@@ -17,12 +17,14 @@ The JSON config file format allows to configure several monitors with one or mor
 
 
 ### Main Section
-| Key | Value | Comment |
-| - | - | - |
-| log_level | string(info\|debug) | Log level of daemon process |
-| log_timestamps | bool | Timestamps in log output. Useful if running with SysVinit |
-| interval | int() | Monitor interval in seconds. A too low value might cause a Service/DNS provider ban |
-| http_provider | string() | URL of the HTTP IP provider to use. Must respond only with an IP address string |
+| Key | Value | Comment | Default |
+| - | - | - | - |
+| log_level | string(info\|debug\|warn\|error) | Log level of daemon process | info |
+| log_timestamps | bool | Timestamps in log output. Useful if running with SysVinit | false |
+| interval | int() | Monitor interval in seconds. A too low value might cause a Service/DNS provider ban | 60 |
+| http_provider | string() | URL of the HTTP IP provider to use. Must respond only with an IP address string | https://api.ipify.org |
+| timeout | int() | Timeout for DNS and HTTP queries | 10 |
+| max_cname_lookups | int() | Maximum CNAME lookups to resolve IP address | 2 |
 
 
 ### Monitors Section
