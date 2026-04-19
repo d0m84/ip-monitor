@@ -47,6 +47,13 @@ func SetLevelError() {
 	SetLevel(logrus.ErrorLevel)
 }
 
+// SetDisableTimestamp sets whether timestamps are disabled in the logger formatter
+func SetDisableTimestamp(disable bool) {
+	lock.Lock()
+	Formatter.DisableTimestamp = disable
+	lock.Unlock()
+}
+
 // Trace logs a message at level Trace to stdout.
 func Trace(args ...interface{}) {
 	log(os.Stdout, func() { logrus.Trace(args...) })

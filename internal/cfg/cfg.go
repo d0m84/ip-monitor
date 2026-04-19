@@ -59,7 +59,7 @@ func LoadConfiguration(cfgFile string) Configuration {
 	}
 
 	if config.LogTimestamps {
-		logger.Formatter.DisableTimestamp = false
+		logger.SetDisableTimestamp(false)
 	}
 
 	if config.HttpIpProvider == "" {
@@ -109,6 +109,7 @@ func LoadConfiguration(cfgFile string) Configuration {
 		if ipVersion != "ip4" && ipVersion != "ip6" {
 			logger.Fatalln("Unsupported IP version:", config.Monitors[i].IPVersion)
 		}
+		config.Monitors[i].IPVersion = ipVersion
 
 		name := config.Monitors[i].Name
 		if name == "" {
