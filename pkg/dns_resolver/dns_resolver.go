@@ -12,8 +12,11 @@ import (
 	"github.com/d0m84/ip-monitor/pkg/logger"
 )
 
-func CheckIfCNAME(domain string) (string, bool, error) {
-	target, err := net.LookupCNAME(domain)
+func CheckIfCNAME(domain string, timeoutSeconds int) (string, bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeoutSeconds))
+	defer cancel()
+
+	target, err := net.DefaultResolver.LookupCNAME(ctx, domain)
 	if err != nil {
 		return "", true, err
 	} else if target == domain {
@@ -25,12 +28,12 @@ func CheckIfCNAME(domain string) (string, bool, error) {
 	}
 }
 
-func FindFinalTarget(domain string, maxCnameLookups int) (string, error) {
+func FindFinalTarget(domain string, maxCnameLookups int, timeoutSeconds int) (string, error) {
 	var err error
 	var target string = domain
 	var is_cname bool
 	for i := 0; i < maxCnameLookups; i++ {
-		target, is_cname, err = CheckIfCNAME(target)
+		target, is_cname, err = CheckIfCNAME(target, timeoutSeconds)
 		if err != nil {
 			logger.Errorf("Error checking if %s is a CNAME: %s", domain, err)
 			return "", err
@@ -144,7 +147,7 @@ func Resolve(domain string, ip_version string, timeoutSeconds int, maxCnameLooku
 		domain += "."
 	}
 
-	target, err := FindFinalTarget(domain, maxCnameLookups)
+	target, err := FindFinalTarget(domain, maxCnameLookups, timeoutSeconds)
 	if err != nil {
 		return nil, errors.New("dns cname lookup error")
 	}
